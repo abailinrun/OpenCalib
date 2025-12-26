@@ -18,11 +18,11 @@
 
 typedef std::vector<Eigen::Vector3d> PL_VEC;
 // typedef pcl::PointXYZINormal pcl::PointXYZINormal;
-const double one_three = (1.0 / 3.0);
+inline const double one_three = (1.0 / 3.0);
 // double feat_eigen_limit[2] = {3 * 3, 2 * 2};
 // double feat_eigen_limit[2] = {5 * 5, 3 * 3};
-double feat_eigen_limit[2] = {4 * 4, 3 * 3};
-double opt_feat_eigen_limit[2] = {4 * 4, 3 * 3};
+inline double feat_eigen_limit[2] = {4 * 4, 3 * 3};
+inline double opt_feat_eigen_limit[2] = {4 * 4, 3 * 3};
 
 // Key of hash table
 class VOXEL_LOC {
@@ -56,8 +56,8 @@ struct M_POINT {
 
 // get feature point if a single pcd
 // Similar with PCL voxelgrid filter
-void down_sampling_voxel(pcl::PointCloud<pcl::PointXYZINormal> &pl_feat,
-                         double voxel_size) {
+inline void down_sampling_voxel(pcl::PointCloud<pcl::PointXYZINormal> &pl_feat,
+                                double voxel_size) {
   if (voxel_size < 0.01) {
     return;
   }
@@ -370,11 +370,11 @@ public:
   }
 };
 
-int OCTO_TREE::voxel_windowsize = 0;
-std::vector<Eigen::Matrix4d> OCTO_TREE::imu_transmat =
+inline int OCTO_TREE::voxel_windowsize = 0;
+inline std::vector<Eigen::Matrix4d> OCTO_TREE::imu_transmat =
     std::vector<Eigen::Matrix4d>(0);
 
-void clear_tree(OCTO_TREE *root) {
+inline void clear_tree(OCTO_TREE *root) {
   if (root != nullptr) {
     for (int i = 0; i < 8; i++) {
       clear_tree(root->leaves[i]);
@@ -401,9 +401,9 @@ void clear_tree(OCTO_TREE *root) {
 // feattype: 0 is surf, 1 is corn
 // fnum: The position in sliding window
 // capacity: The capacity of sliding window, a little bigger than windowsize
-void cut_voxel(std::unordered_map<VOXEL_LOC, OCTO_TREE *> &feat_map,
-               pcl::PointCloud<pcl::PointXYZI>::Ptr pl_feat, Eigen::Matrix4d T,
-               int feattype, int fnum, int capacity) {
+inline void cut_voxel(std::unordered_map<VOXEL_LOC, OCTO_TREE *> &feat_map,
+                      pcl::PointCloud<pcl::PointXYZI>::Ptr pl_feat, Eigen::Matrix4d T,
+                      int feattype, int fnum, int capacity) {
   double voxel_size[2] = {1, 1}; // {surf, corn}
   uint plsize = pl_feat->size();
   for (uint i = 0; i < plsize; i++) {
@@ -448,9 +448,9 @@ void cut_voxel(std::unordered_map<VOXEL_LOC, OCTO_TREE *> &feat_map,
   }
 }
 
-void getVoxelMap(OCTO_TREE *root,
-                 pcl::PointCloud<pcl::PointXYZRGB> &display_pcd,
-                 int &voxel_num) {
+inline void getVoxelMap(OCTO_TREE *root,
+                        pcl::PointCloud<pcl::PointXYZRGB> &display_pcd,
+                        int &voxel_num) {
   if (root == nullptr)
     return;
   if (root->octo_state == 0) {
@@ -482,7 +482,7 @@ void getVoxelMap(OCTO_TREE *root,
   }
 }
 
-void displayVoxelMap(std::unordered_map<VOXEL_LOC, OCTO_TREE *> map) {
+inline void displayVoxelMap(std::unordered_map<VOXEL_LOC, OCTO_TREE *> map) {
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr display_pcd(
       new pcl::PointCloud<pcl::PointXYZRGB>);
   srand((unsigned)time(NULL));
@@ -495,8 +495,8 @@ void displayVoxelMap(std::unordered_map<VOXEL_LOC, OCTO_TREE *> map) {
   pcl::PCDWriter writer;
   writer.write("voxel_map.pcd", *display_pcd);
 }
-void getVoxelResidual1(OCTO_TREE *root, ceres::Problem &problem,
-                       double *deltaRPY, double *deltaT) {
+inline void getVoxelResidual1(OCTO_TREE *root, ceres::Problem &problem,
+                              double *deltaRPY, double *deltaT) {
   if (root == nullptr)
     return;
   if (root->octo_state == 0) {
@@ -526,8 +526,8 @@ void getVoxelResidual1(OCTO_TREE *root, ceres::Problem &problem,
   }
 }
 
-void getVoxelResidual2(OCTO_TREE *root, ceres::Problem &problem,
-                       double *deltaRPY, double *deltaT) {
+inline void getVoxelResidual2(OCTO_TREE *root, ceres::Problem &problem,
+                              double *deltaRPY, double *deltaT) {
   if (root == nullptr)
     return;
   if (root->octo_state == 0) {
@@ -559,8 +559,8 @@ void getVoxelResidual2(OCTO_TREE *root, ceres::Problem &problem,
   }
 }
 
-void getVoxelResidual2_NOT(OCTO_TREE *root, ceres::Problem &problem,
-                           double *deltaRPY) {
+inline void getVoxelResidual2_NOT(OCTO_TREE *root, ceres::Problem &problem,
+                                  double *deltaRPY) {
   if (root == nullptr)
     return;
   if (root->octo_state == 0) {
@@ -592,8 +592,8 @@ void getVoxelResidual2_NOT(OCTO_TREE *root, ceres::Problem &problem,
   }
 }
 
-void getVoxelResidual3(OCTO_TREE *root, ceres::Problem &problem,
-                       double *deltaRPY, double *deltaT) {
+inline void getVoxelResidual3(OCTO_TREE *root, ceres::Problem &problem,
+                              double *deltaRPY, double *deltaT) {
   if (root == nullptr)
     return;
   if (root->octo_state == 0) {
@@ -622,8 +622,8 @@ void getVoxelResidual3(OCTO_TREE *root, ceres::Problem &problem,
   }
 }
 
-void getVoxelResidualTrans(OCTO_TREE *root, ceres::Problem &problem,
-                           const Eigen::Matrix4d deltaTrans, double *deltaT) {
+inline void getVoxelResidualTrans(OCTO_TREE *root, ceres::Problem &problem,
+                                  const Eigen::Matrix4d deltaTrans, double *deltaT) {
   if (root == nullptr)
     return;
   if (root->octo_state == 0) {
@@ -655,9 +655,9 @@ void getVoxelResidualTrans(OCTO_TREE *root, ceres::Problem &problem,
   }
 }
 // method = 1, 2, 3
-void optimizeDeltaTrans(std::unordered_map<VOXEL_LOC, OCTO_TREE *> surf_map,
-                        std::unordered_map<VOXEL_LOC, OCTO_TREE *> corn_map,
-                        const int &method, double *deltaRPY, double *deltaT) {
+inline void optimizeDeltaTrans(std::unordered_map<VOXEL_LOC, OCTO_TREE *> surf_map,
+                               std::unordered_map<VOXEL_LOC, OCTO_TREE *> corn_map,
+                               const int &method, double *deltaRPY, double *deltaT) {
   ceres::Problem problem;
 
   double deltaQ[4];

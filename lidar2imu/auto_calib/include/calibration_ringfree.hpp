@@ -11,9 +11,9 @@
  */
 #pragma once
 
-#include <eigen3/Eigen/Core>
-#include <eigen3/Eigen/Dense>
-#include <eigen3/Eigen/Geometry>
+#include <Eigen/Core>
+#include <Eigen/Dense>
+#include <Eigen/Geometry>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/octree/octree_search.h>
@@ -66,10 +66,12 @@ public:
   void SaveStitching(const Eigen::Matrix4d transform,
                      const std::string pcd_name);
 
-private:
-  // Calibration parameters
+public:
+  // Calibration parameters (public for configuration)
   int turn_ = 20;      // Number of optimization rounds
   int window_ = 10;    // Sliding window size
+
+private:
 
   // Data storage
   std::vector<std::string> lidar_files_;

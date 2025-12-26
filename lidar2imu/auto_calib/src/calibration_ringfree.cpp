@@ -14,6 +14,9 @@
 #include "gen_ringfree_feature.hpp"  // Use ring-free feature extraction
 #include "logging.hpp"
 
+#include <Eigen/Dense>
+#include <iostream>
+
 RingFreeCalibrator::RingFreeCalibrator(){};
 
 RingFreeCalibrator::~RingFreeCalibrator(){};
@@ -265,7 +268,7 @@ void RingFreeCalibrator::SaveStitching(const Eigen::Matrix4d transform,
   for (size_t i = 0; i < lidar_files_.size(); i++) {
     std::string lidar_file_name = lidar_path_ + lidar_files_[i] + ".pcd";
     if (pcl::io::loadPCDFile(lidar_file_name, *cloud) < 0) {
-      LOGW("can not open %s", lidar_file_name);
+      LOGW("can not open %s", lidar_file_name.c_str());
       return;
     }
 

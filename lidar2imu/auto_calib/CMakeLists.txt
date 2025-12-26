@@ -1,32 +1,31 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.10)
 project(LidarToImu)
 set(CMAKE_CXX_FLAGS "-std=c++11 -g -Wall")
 set(CMAKE_CXX_STANDARD 14)
 
-# OpenMP support for parallel PCA computation in ring-free feature extraction
+# OpenMP for parallel PCA computation (optional)
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
     message(STATUS "OpenMP found, enabling parallel feature extraction")
-else()
-    message(WARNING "OpenMP not found, ring-free PCA feature extraction will be slower")
 endif()
 
-## Get Pangolin
-find_package(Pangolin 0.4 REQUIRED)
-include_directories(${Pangolin_INCLUDE_DIRS})
-
-find_package(PCL REQUIRED)
+find_package(PCL REQUIRED COMPONENTS common io kdtree filters segmentation sample_consensus)
 find_package(Boost REQUIRED system)
 find_package(OpenCV REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(JSONCPP REQUIRED jsoncpp)
+
 link_directories(${OpenCV_LIBRARY_DIRS})
 include_directories(${OpenCV_INCLUDE_DIRS})
+include_directories(${JSONCPP_INCLUDE_DIRS})
 
 add_subdirectory(ceres)
-include_directories(SYSTEM ${PROJECT_SOURCE_DIR}/eigen3)
 include_directories(${PROJECT_SOURCE_DIR}/ceres/include)
 
-include_directories(${EIGEN_ROOT})
+# Use system Eigen (required for compatibility with PCL)
+find_package(Eigen3 3.3 REQUIRED)
+include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${PCL_INCLUDE_DIRS})
@@ -36,7 +35,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 
 file(GLOB_RECURSE PARSER_PATH src/*.cpp)
 add_library(${PROJECT_NAME} STATIC ${PARSER_PATH})
-target_link_libraries(${PROJECT_NAME} libjsoncpp.a ${OpenCV_LIBS} ${Boost_SYSTEM_LIBRARY} ceres)
+target_link_libraries(${PROJECT_NAME} ${JSONCPP_LIBRARIES} ${OpenCV_LIBS} ${Boost_SYSTEM_LIBRARY} ceres)
 
 add_executable(run_lidar2imu src/run_lidar2imu.cpp)
 target_link_libraries(run_lidar2imu ${PROJECT_NAME})

@@ -2,6 +2,16 @@ cmake_minimum_required(VERSION 2.8.3)
 project(LidarToImu)
 set(CMAKE_CXX_FLAGS "-std=c++11 -g -Wall")
 set(CMAKE_CXX_STANDARD 14)
+
+# OpenMP support for parallel PCA computation in ring-free feature extraction
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    message(STATUS "OpenMP found, enabling parallel feature extraction")
+else()
+    message(WARNING "OpenMP not found, ring-free PCA feature extraction will be slower")
+endif()
+
 ## Get Pangolin
 find_package(Pangolin 0.4 REQUIRED)
 include_directories(${Pangolin_INCLUDE_DIRS})

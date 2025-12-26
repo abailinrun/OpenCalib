@@ -14,6 +14,7 @@
 #include <pcl/point_cloud.h>
 
 #include "calibration.hpp"
+#include "calibration_ringfree.hpp"
 #include "extrinsic_param.hpp"
 #include "registration.hpp"
 #include <iostream>
@@ -25,22 +26,33 @@ using namespace std;
 
 void printUsage() {
   cout << "Usage: ./run_lidar2imu <lidar_pcds_dir> <poses_path> "
-          "<extrinsic_json> [--method <balm|voxel|ground>]"
+          "<extrinsic_json> [--method <balm|pca|voxel|ground>]"
           "\n\nMethods:"
           "\n  balm   : LOAM-style feature extraction with BALM optimization (default)"
           "\n           Requires valid ring field in PCD (mechanical LiDAR)"
-          "\n  voxel  : Voxel occupancy based optimization (ring-free)"
-          "\n           Suitable for MEMS LiDAR (e.g., RoboSense M1)"
-          "\n  ground : Ground plane based optimization (ring-free)"
-          "\n           Optimizes roll/pitch using ground plane constraints"
+          "\n  pca    : PCA-based feature extraction (ring-free, RECOMMENDED for MEMS)"
+          "\n           Uses K-NN + covariance analysis for feature classification"
+          "\n           Full 6-DOF optimization, large search range (20°+)"
+          "\n  voxel  : Voxel occupancy based optimization (ring-free, refinement only)"
+          "\n           Limited search range (±3° yaw, ±0.6m tx/ty)"
+          "\n           Only optimizes yaw, tx, ty (not roll, pitch, tz)"
+          "\n  ground : Ground plane based optimization (ring-free, refinement only)"
+          "\n           Limited search range (±6° roll/pitch)"
+          "\n           Only optimizes roll, pitch (not yaw, tx, ty, tz)"
           "\n\nExamples:"
           "\n  # Standard calibration (mechanical LiDAR with valid ring field)"
           "\n  ./bin/run_lidar2imu data/top_center_lidar/ \\"
           "\n      data/NovAtel-pose-lidar-time.txt \\"
           "\n      data/gnss-to-top_center_lidar-extrinsic.json"
           "\n"
-          "\n  # MEMS LiDAR calibration (ring-free, voxel method)"
-          "\n  ./bin/run_lidar2imu data/virtual_lidar/ \\"
+          "\n  # MEMS LiDAR calibration (ring-free, PCA method - RECOMMENDED)"
+          "\n  ./bin/run_lidar2imu data/m1_lidar/ \\"
+          "\n      data/NovAtel-pose-lidar-time.txt \\"
+          "\n      data/gnss-to-sensor_kit_base_link-extrinsic.json \\"
+          "\n      --method pca"
+          "\n"
+          "\n  # Refinement only (requires good initial extrinsic < 3°)"
+          "\n  ./bin/run_lidar2imu data/m1_lidar/ \\"
           "\n      data/NovAtel-pose-lidar-time.txt \\"
           "\n      data/gnss-to-sensor_kit_base_link-extrinsic.json \\"
           "\n      --method voxel"
@@ -72,9 +84,9 @@ int main(int argc, char **argv) {
   }
 
   // Validate method
-  if (method != "balm" && method != "voxel" && method != "ground") {
+  if (method != "balm" && method != "pca" && method != "voxel" && method != "ground") {
     cerr << "ERROR: Unknown method '" << method << "'" << endl;
-    cerr << "Valid methods: balm, voxel, ground" << endl;
+    cerr << "Valid methods: balm, pca, voxel, ground" << endl;
     return 1;
   }
 
@@ -94,6 +106,13 @@ int main(int argc, char **argv) {
     // Original BALM method (requires valid ring field)
     LOGI("Using BALM method (requires valid ring field)");
     Calibrator calibrator;
+    calibrator.Calibration(lidar_pcds_dir, poses_path, lidar2imu_extrinsic);
+  } else if (method == "pca") {
+    // PCA-based method (ring-free, MEMS LiDAR compatible)
+    LOGI("Using PCA-based method (ring-free, MEMS LiDAR compatible)");
+    LOGI("This method uses K-NN + covariance analysis for feature extraction");
+    LOGI("Full 6-DOF optimization with large search range (20°+)");
+    RingFreeCalibrator calibrator;
     calibrator.Calibration(lidar_pcds_dir, poses_path, lidar2imu_extrinsic);
   } else if (method == "voxel") {
     // Voxel occupancy method (ring-free, MEMS LiDAR compatible)

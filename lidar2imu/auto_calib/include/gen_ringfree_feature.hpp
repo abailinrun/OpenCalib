@@ -194,18 +194,36 @@ bool genPcdFeatureRingFree(
   std::cout << "[RingFree] Processing " << cloud_size << " points..." << std::endl;
   auto start_time = std::chrono::steady_clock::now();
 
-  // Convert to PointXYZI for KD-tree (if needed)
+  // Convert to PointXYZI for KD-tree (if needed).
+  // Drop non-finite points at the source: MEMS clouds (e.g. RoboSense M1) are
+  // is_dense=false and carry NaN returns; letting them into the KD-tree poisons
+  // KNN neighborhoods, the PCA covariance, and ultimately every Ceres residual.
   pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_xyzi(new pcl::PointCloud<pcl::PointXYZI>());
   cloud_xyzi->reserve(cloud_size);
 
   for (int i = 0; i < cloud_size; ++i) {
     const PointT& src = laserCloud->points[i];
+    if (!std::isfinite(src.x) || !std::isfinite(src.y) || !std::isfinite(src.z)) {
+      continue;
+    }
     pcl::PointXYZI dst;
     dst.x = src.x;
     dst.y = src.y;
     dst.z = src.z;
     dst.intensity = src.intensity;
     cloud_xyzi->push_back(dst);
+  }
+
+  if (static_cast<int>(cloud_xyzi->size()) < cloud_size) {
+    std::cout << "[RingFree] Dropped " << cloud_size - static_cast<int>(cloud_xyzi->size())
+              << " non-finite points (" << cloud_xyzi->size() << " kept)" << std::endl;
+  }
+  // All loops below iterate cloud_xyzi; keep the size variable consistent.
+  cloud_size = static_cast<int>(cloud_xyzi->size());
+  if (cloud_size < RingFreeConfig::KNN_NEIGHBORS * 2) {
+    std::cerr << "[ERROR] Too few finite points for feature extraction: "
+              << cloud_size << std::endl;
+    return false;
   }
 
   // Build KD-tree

@@ -29,6 +29,16 @@ void LoadExtrinsic(const std::string &filename, Eigen::Matrix4d &extrinsic) {
     std::string id = *(name.begin());
     std::cout << id << std::endl;
     Json::Value data = root[id]["param"]["sensor_calib"]["data"];
+    // Fail loud on schema mismatch: jsoncpp returns null for missing keys and
+    // null.asDouble()==0, which would silently produce an all-zero extrinsic
+    // (every transformed point collapses to the origin -> single voxel ->
+    // empty optimization problem reported as 0-cost CONVERGENCE).
+    if (data.isNull() || !data.isArray() || data.size() != 4) {
+      std::cerr << "[FATAL] extrinsic json schema mismatch: expected "
+                << "<top-key>.param.sensor_calib.data as a 4x4 array in "
+                << filename << std::endl;
+      exit(1);
+    }
     extrinsic << data[0][0].asDouble(), data[0][1].asDouble(),
         data[0][2].asDouble(), data[0][3].asDouble(), data[1][0].asDouble(),
         data[1][1].asDouble(), data[1][2].asDouble(), data[1][3].asDouble(),

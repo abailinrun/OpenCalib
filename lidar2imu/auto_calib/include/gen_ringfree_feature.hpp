@@ -20,6 +20,7 @@
 #ifndef GEN_RINGFREE_FEATURE_HPP
 #define GEN_RINGFREE_FEATURE_HPP
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <iostream>
@@ -226,6 +227,25 @@ bool genPcdFeatureRingFree(
     return false;
   }
 
+  // Adaptive intensity threshold. MEMS units (RoboSense M1) report intensity
+  // in a far lower band than the mechanical lidars the original constant was
+  // tuned for (rx-4 measured p50=8 / p95=29 vs fixed 35.0, which silently
+  // discarded >95% of points and starved feature extraction into NaN costs).
+  // Use the 10th percentile, capped by the original constant, so only the
+  // weakest returns are dropped regardless of the sensor's intensity scale.
+  float intensity_threshold = RingFreeConfig::INTENSITY_THRESHOLD;
+  {
+    std::vector<float> intens;
+    intens.reserve(cloud_size);
+    for (const auto& p : cloud_xyzi->points) intens.push_back(p.intensity);
+    const size_t k10 = intens.size() / 10;
+    std::nth_element(intens.begin(), intens.begin() + k10, intens.end());
+    intensity_threshold = std::min(RingFreeConfig::INTENSITY_THRESHOLD,
+                                   std::max(1.0f, intens[k10]));
+  }
+  std::cout << "[RingFree] Intensity threshold (adaptive p10, capped): "
+            << intensity_threshold << std::endl;
+
   // Build KD-tree
   pcl::KdTreeFLANN<pcl::PointXYZI> kdtree;
   kdtree.setInputCloud(cloud_xyzi);
@@ -257,8 +277,8 @@ bool genPcdFeatureRingFree(
   for (int i = 0; i < cloud_size; ++i) {
     const pcl::PointXYZI& point = cloud_xyzi->points[i];
 
-    // Skip low intensity points
-    if (point.intensity < RingFreeConfig::INTENSITY_THRESHOLD) {
+    // Skip low intensity points (adaptive threshold, see above)
+    if (point.intensity < intensity_threshold) {
       continue;
     }
 

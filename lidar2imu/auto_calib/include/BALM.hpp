@@ -25,6 +25,11 @@ inline const double one_three = (1.0 / 3.0);
 inline double feat_eigen_limit[2] = {4 * 4, 3 * 3};
 inline double opt_feat_eigen_limit[2] = {4 * 4, 3 * 3};
 
+// leaf-consumption diagnostics (printed by optimizeDeltaTrans)
+inline long g_dbg_leaf_gated_ratio = 0;
+inline long g_dbg_leaf_slot0_empty = 0;
+inline long g_dbg_leaf_consumed = 0;
+
 // Key of hash table
 class VOXEL_LOC {
 public:
@@ -607,10 +612,12 @@ inline void getVoxelResidual2_NOT(OCTO_TREE *root, ceres::Problem &problem,
   // costs. Sparse MEMS clouds (RoboSense M1, 120-deg FOV) hit this leaf
   // class constantly. !(x > 0) also rejects NaN from degenerate covariance.
   if (root->octo_state == 0 && !(root->feat_eigen_ratio > 0)) {
+    ++g_dbg_leaf_gated_ratio;
     return;
   }
   if (root->octo_state == 0) {
     if ((*root->plvec_orig[0]).size() != 0) {
+      ++g_dbg_leaf_consumed;
       Eigen::Matrix4d imu_tran_orig = OCTO_TREE::imu_transmat[0];
       Eigen::Vector3d point_average;
       Eigen::Vector3d normal;
@@ -630,6 +637,8 @@ inline void getVoxelResidual2_NOT(OCTO_TREE *root, ceres::Problem &problem,
           problem.AddResidualBlock(cost_function, nullptr, deltaRPY);
         }
       }
+    } else {
+      ++g_dbg_leaf_slot0_empty;
     }
     return;
   } else {
@@ -766,7 +775,10 @@ inline void optimizeDeltaTrans(std::unordered_map<VOXEL_LOC, OCTO_TREE *> surf_m
   // Diagnostic: an empty problem "converges" at zero cost with -2 iterations,
   // which silently masks over-aggressive leaf gating / starved voxelization.
   std::cout << "[BALM] residual blocks: " << problem.NumResidualBlocks()
-            << std::endl;
+            << " | leaves consumed: " << g_dbg_leaf_consumed
+            << ", gated(ratio): " << g_dbg_leaf_gated_ratio
+            << ", slot0-empty: " << g_dbg_leaf_slot0_empty << std::endl;
+  g_dbg_leaf_consumed = g_dbg_leaf_gated_ratio = g_dbg_leaf_slot0_empty = 0;
 
   ceres::Solver::Options options;
   options.linear_solver_type = ceres::DENSE_QR;

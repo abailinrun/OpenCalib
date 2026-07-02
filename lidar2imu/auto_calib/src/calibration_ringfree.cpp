@@ -178,6 +178,11 @@ void RingFreeCalibrator::Calibration(const std::string lidar_path,
     }
 
     // Optimize
+    std::cout << "[RingFree] surf_map voxels: " << surf_map.size()
+              << ", corn_map: " << corn_map.size()
+              << ", voxel_windowsize: " << OCTO_TREE::voxel_windowsize
+              << ", imu_transmat: " << OCTO_TREE::imu_transmat.size()
+              << std::endl;
     if (i < turn / 2) {
       optimizeDeltaTrans(surf_map, corn_map, 4, deltaRPY, deltaT);
     } else {

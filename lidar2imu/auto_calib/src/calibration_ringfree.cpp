@@ -152,12 +152,14 @@ void RingFreeCalibrator::Calibration(const std::string lidar_path,
       Eigen::Matrix4d refined_T = imu_T * deltaTrans;
       OCTO_TREE::imu_transmat.push_back(imu_T);
 
-      if (i < turn / 2) {
-        cut_voxel(surf_map, pl_surf_sharp, refined_T, 0, frmIdx,
-                  window_size + 5);
-      } else {
-        cut_voxel(surf_map, pl_surf, refined_T, 0, frmIdx, window_size + 5);
-      }
+      // Always voxelize the full less-flat surf set. The original
+      // sharp-first schedule feeds so few points on sparse MEMS clouds
+      // (~200/frame after selection caps) that every voxel leaf stays
+      // below MIN_PS, the eigen gate rejects them all and the Ceres
+      // problem ends up empty (0-cost "CONVERGENCE" with -2 iterations).
+      // The dense set (~12k/frame) keeps voxel plane fits well-conditioned
+      // through all rounds.
+      cut_voxel(surf_map, pl_surf, refined_T, 0, frmIdx, window_size + 5);
 
       // Process voxels
       for (auto iter = surf_map.begin(); iter != surf_map.end(); ++iter) {

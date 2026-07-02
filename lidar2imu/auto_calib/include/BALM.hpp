@@ -5,6 +5,7 @@
  */
 #pragma once
 
+#include <algorithm>
 #include <pcl/common/transforms.h>
 #include <unordered_map>
 // #include <opencv/cv.h>
@@ -226,20 +227,26 @@ public:
       }
     }
 
+    // Slot-0 may legitimately be empty for narrow-FOV MEMS lidars (a voxel
+    // first observed mid-window has no frame-0 points); dividing by zero
+    // would inject NaN into the *_zero/*_orig products. Clamp the divisor —
+    // the consumers gate on plvec_orig[0] being non-empty anyway, so the
+    // (finite) placeholder values of such leaves are never used.
+    const double n_slot0 = std::max<double>(1.0, double(plvec_orig[0]->size()));
     covMat += sig_vec.sigma_vTv;
     center += sig_vec.sigma_vi;
     center /= points_size;
     covMat_zero += sig_vec.sigma_vTv;
     center_zero += sig_vec.sigma_vi;
-    center_zero /= double(plvec_orig[0]->size());
+    center_zero /= n_slot0;
     covMat_orig += sig_vec.sigma_vTv;
     center_orig += sig_vec.sigma_vi;
-    center_orig /= double(plvec_orig[0]->size());
+    center_orig /= n_slot0;
 
     covMat = covMat / points_size - center * center.transpose();
-    covMat_zero = covMat_zero / double(plvec_tran[0]->size()) -
+    covMat_zero = covMat_zero / n_slot0 -
                   center_zero * center_zero.transpose();
-    covMat_orig = covMat_orig / double(plvec_tran[0]->size()) -
+    covMat_orig = covMat_orig / n_slot0 -
                   center_orig * center_orig.transpose();
 
     Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> saes(covMat);
@@ -453,6 +460,15 @@ inline void getVoxelMap(OCTO_TREE *root,
                         int &voxel_num) {
   if (root == nullptr)
     return;
+  // Only consume leaves whose eigen decomposition actually ran: recut()'s
+  // MIN_PS early-return leaves feat_eigen_ratio at the -1 sentinel and the
+  // ap_centor_direct* fields default-constructed (PCL points are POD, i.e.
+  // uninitialized memory) — feeding those normals into Ceres yields NaN
+  // costs. Sparse MEMS clouds (RoboSense M1, 120-deg FOV) hit this leaf
+  // class constantly. !(x > 0) also rejects NaN from degenerate covariance.
+  if (root->octo_state == 0 && !(root->feat_eigen_ratio > 0)) {
+    return;
+  }
   if (root->octo_state == 0) {
     if (root->plvec_tran.size() != 0) {
       if (root->quater_length > 0.5)
@@ -499,6 +515,15 @@ inline void getVoxelResidual1(OCTO_TREE *root, ceres::Problem &problem,
                               double *deltaRPY, double *deltaT) {
   if (root == nullptr)
     return;
+  // Only consume leaves whose eigen decomposition actually ran: recut()'s
+  // MIN_PS early-return leaves feat_eigen_ratio at the -1 sentinel and the
+  // ap_centor_direct* fields default-constructed (PCL points are POD, i.e.
+  // uninitialized memory) — feeding those normals into Ceres yields NaN
+  // costs. Sparse MEMS clouds (RoboSense M1, 120-deg FOV) hit this leaf
+  // class constantly. !(x > 0) also rejects NaN from degenerate covariance.
+  if (root->octo_state == 0 && !(root->feat_eigen_ratio > 0)) {
+    return;
+  }
   if (root->octo_state == 0) {
     if ((*root->plvec_orig[0]).size() != 0) {
       Eigen::Vector3d point_average;
@@ -530,6 +555,15 @@ inline void getVoxelResidual2(OCTO_TREE *root, ceres::Problem &problem,
                               double *deltaRPY, double *deltaT) {
   if (root == nullptr)
     return;
+  // Only consume leaves whose eigen decomposition actually ran: recut()'s
+  // MIN_PS early-return leaves feat_eigen_ratio at the -1 sentinel and the
+  // ap_centor_direct* fields default-constructed (PCL points are POD, i.e.
+  // uninitialized memory) — feeding those normals into Ceres yields NaN
+  // costs. Sparse MEMS clouds (RoboSense M1, 120-deg FOV) hit this leaf
+  // class constantly. !(x > 0) also rejects NaN from degenerate covariance.
+  if (root->octo_state == 0 && !(root->feat_eigen_ratio > 0)) {
+    return;
+  }
   if (root->octo_state == 0) {
     if ((*root->plvec_orig[0]).size() != 0) {
       Eigen::Matrix4d imu_tran_orig = OCTO_TREE::imu_transmat[0];
@@ -563,6 +597,15 @@ inline void getVoxelResidual2_NOT(OCTO_TREE *root, ceres::Problem &problem,
                                   double *deltaRPY) {
   if (root == nullptr)
     return;
+  // Only consume leaves whose eigen decomposition actually ran: recut()'s
+  // MIN_PS early-return leaves feat_eigen_ratio at the -1 sentinel and the
+  // ap_centor_direct* fields default-constructed (PCL points are POD, i.e.
+  // uninitialized memory) — feeding those normals into Ceres yields NaN
+  // costs. Sparse MEMS clouds (RoboSense M1, 120-deg FOV) hit this leaf
+  // class constantly. !(x > 0) also rejects NaN from degenerate covariance.
+  if (root->octo_state == 0 && !(root->feat_eigen_ratio > 0)) {
+    return;
+  }
   if (root->octo_state == 0) {
     if ((*root->plvec_orig[0]).size() != 0) {
       Eigen::Matrix4d imu_tran_orig = OCTO_TREE::imu_transmat[0];
@@ -596,6 +639,15 @@ inline void getVoxelResidual3(OCTO_TREE *root, ceres::Problem &problem,
                               double *deltaRPY, double *deltaT) {
   if (root == nullptr)
     return;
+  // Only consume leaves whose eigen decomposition actually ran: recut()'s
+  // MIN_PS early-return leaves feat_eigen_ratio at the -1 sentinel and the
+  // ap_centor_direct* fields default-constructed (PCL points are POD, i.e.
+  // uninitialized memory) — feeding those normals into Ceres yields NaN
+  // costs. Sparse MEMS clouds (RoboSense M1, 120-deg FOV) hit this leaf
+  // class constantly. !(x > 0) also rejects NaN from degenerate covariance.
+  if (root->octo_state == 0 && !(root->feat_eigen_ratio > 0)) {
+    return;
+  }
   if (root->octo_state == 0) {
     if (root->plvec_tran.size() != 0) {
       int point_size = root->getpointsize();
@@ -626,6 +678,15 @@ inline void getVoxelResidualTrans(OCTO_TREE *root, ceres::Problem &problem,
                                   const Eigen::Matrix4d deltaTrans, double *deltaT) {
   if (root == nullptr)
     return;
+  // Only consume leaves whose eigen decomposition actually ran: recut()'s
+  // MIN_PS early-return leaves feat_eigen_ratio at the -1 sentinel and the
+  // ap_centor_direct* fields default-constructed (PCL points are POD, i.e.
+  // uninitialized memory) — feeding those normals into Ceres yields NaN
+  // costs. Sparse MEMS clouds (RoboSense M1, 120-deg FOV) hit this leaf
+  // class constantly. !(x > 0) also rejects NaN from degenerate covariance.
+  if (root->octo_state == 0 && !(root->feat_eigen_ratio > 0)) {
+    return;
+  }
   if (root->octo_state == 0) {
     if ((*root->plvec_orig[0]).size() != 0) {
       Eigen::Matrix4d imu_tran_orig = OCTO_TREE::imu_transmat[0];

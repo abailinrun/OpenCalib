@@ -6,9 +6,9 @@
 
 #pragma once
 
-#include <eigen3/Eigen/Core>
-#include <eigen3/Eigen/Dense>
-#include <eigen3/Eigen/Geometry>
+#include <Eigen/Core>
+#include <Eigen/Dense>
+#include <Eigen/Geometry>
 #include <pcl/io/pcd_io.h>
 #include <pcl/octree/octree_search.h>
 #include <pcl/point_cloud.h>

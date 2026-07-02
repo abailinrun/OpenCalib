@@ -57,9 +57,15 @@ namespace RingFreeConfig {
   // Intensity threshold (same as original)
   constexpr float INTENSITY_THRESHOLD = 35.0f;
 
-  // Maximum points per feature type per segment
-  constexpr int MAX_EDGE_PER_SEGMENT = 2;
-  constexpr int MAX_PLANAR_PER_SEGMENT = 4;
+  // Maximum points per feature type per segment.
+  // The original 2/4 caps yield only ~8 edge + ~16 sharp-planar points per
+  // frame (6 segments); the calibrator's first-half rounds feed voxel BA with
+  // the sharp set alone, so a 10-frame window carried ~160 points into 1 m
+  // voxels — 0-2 points per voxel, degenerate plane fits, NaN costs on dense
+  // MEMS clouds (RoboSense M1, ~78k pts/frame). Raised so the sharp set keeps
+  // a few hundred well-distributed points per frame.
+  constexpr int MAX_EDGE_PER_SEGMENT = 20;
+  constexpr int MAX_PLANAR_PER_SEGMENT = 40;
 
   // Number of angular segments for feature distribution
   constexpr int NUM_SEGMENTS = 6;

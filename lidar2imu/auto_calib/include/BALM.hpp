@@ -154,6 +154,9 @@ public:
 
   OCTO_TREE(int ft, int capa) : ftype(ft), capacity(capa) {
     octo_state = 0;
+    // explicit sentinel: a voxel that never ran recut()/calc_eigen() must be
+    // rejected by the consumer gate (reading an uninitialized double is UB)
+    feat_eigen_ratio = -1;
     for (int i = 0; i < 8; i++) {
       leaves[i] = nullptr;
     }
@@ -759,6 +762,11 @@ inline void optimizeDeltaTrans(std::unordered_map<VOXEL_LOC, OCTO_TREE *> surf_m
       getVoxelResidual2_NOT(iter->second, problem, deltaQ);
     }
   }
+
+  // Diagnostic: an empty problem "converges" at zero cost with -2 iterations,
+  // which silently masks over-aggressive leaf gating / starved voxelization.
+  std::cout << "[BALM] residual blocks: " << problem.NumResidualBlocks()
+            << std::endl;
 
   ceres::Solver::Options options;
   options.linear_solver_type = ceres::DENSE_QR;
